@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MarkDown4W</title>
+
+  <!-- All resources are local (offline). No remote URLs. -->
+  <link rel="stylesheet" href="./theme.css">
+  <link rel="stylesheet" href="./vendor/katex.min.css">
+  <!-- highlight.js themes: exactly one is enabled at a time (see applySettings). -->
+  <link id="hljs-light" rel="stylesheet" href="./vendor/hljs-github.css">
+  <link id="hljs-dark" rel="stylesheet" href="./vendor/hljs-github-dark.css" disabled>
+
+  <script src="./vendor/markdown-it.min.js"></script>
+  <script src="./vendor/highlight.min.js"></script>
+  <script src="./vendor/katex.min.js"></script>
+  <script src="./vendor/auto-render.min.js"></script>
+  <!-- mermaid: self-contained UMD bundle exposing global `mermaid`. -->
+  <script src="./vendor/mermaid.min.js"></script>
+</head>
+<body>
+  <main id="content"></main>
+
+  <script>
+  (function () {
+    "use strict";
+
+    /* ---------------------------------------------------------------- *
+     * Font stacks (font key -> CSS font-family)
+     * ---------------------------------------------------------------- */
+    var BODY_FONTS = {
+      system:    '-apple-system, "SF Pro Text", system-ui, sans-serif',
+      newyork:   '"New York", ui-serif, Georgia, serif',
+      georgia:   'Georgia, "Times New Roman", serif',
+      helvetica: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+    };
+    var CODE_FONTS = {
+      sfmono: '"SF Mono", ui-monospace, Menlo, monospace'
+    };
+
+    /* ---------------------------------------------------------------- *
+     * markdown-it setup
+     * ---------------------------------------------------------------- */
+    var hasHljs = typeof window.hljs !== "undefined";
+
+    var md = window.markdownit({
+      html: false,
+      linkify: true,
+      typographer: true,
+      highlight: function (str, lang) {
+        if (hasHljs && lang && window.hljs.getLanguage(lang)) {
+          try {
+            return '<pre><code class="hljs language-' + lang + '">' +
+              window.hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+              '</code></pre>';
+          } catch (e) { /* fall through */ }
+        }
+        if (hasHljs) {
+          try {
+            return '<pre><code class="hljs">' +
+              window.hljs.highlightAuto(str).value + '</code></pre>';
+          } catch (e) { /* fall through */ }
+        }
+        return '<pre><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+      }
+    });
+
+    // GFM tables + strikethrough are enabled in markdown-it core by default;
+    // ensure linkify is on for bare URLs.
+    md.enable(["table", "strikethrough", "linkify"]);
+
+    /* ---- mermaid fence override -------------------------------------
+     * Render ```mermaid blocks as <pre class="mermaid" data-src="...">SRC</pre>
+     * so the raw source survives for re-rendering on theme change.        */
+    var defaultFence = md.renderer.rules.fence ||
+      function (tokens, idx, options, env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+    md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+      var token = tokens[idx];
+      var info = token.info ? md.utils.unescapeAll(token.info).trim() : "";
+      var lang = info.split(/\s+/g)[0];
+      if (lang === "mermaid") {
+        var src = token.content;
+        var enc = md.utils.escapeHtml(src);
+        return '<pre class="mermaid" data-src="' + enc + '">' + enc + '</pre>\n';
+      }
+      return defaultFence(tokens, idx, options, env, self);
+    };
+
+    /* ---- small task-list plugin (read-only checkboxes) ---------------
+     * Turns "- [ ]" / "- [x]" leading list items into disabled checkboxes.
+     * Operates on the token stream so it composes with the rest of md.    */
+    function taskListPlugin(mdInst) {
+      mdInst.core.ruler.after("inline", "markdown4w-task-lists", function (state) {
+        var tokens = state.tokens;
+        for (var i = 0; i < tokens.length; i++) {
+          if (tokens[i].type !== "inline") continue;
+          if (i < 2) continue;
+          // inline is preceded by paragraph_open, which is preceded by list_item_open
+          if (tokens[i - 1].type !== "paragraph_open") continue;
+          if (tokens[i - 2].type !== "list_item_open") continue;
+
+          var inline = tokens[i];
+          var children = inline.children;
+          if (!children || children.length < 1) continue;
+          var first = children[0];
+          if (first.type !== "text") continue;
+
+          var m = /^\[([ xX])\]\s(.*)$/.exec(first.content);
+          if (!m) continue;
+
+          var checked = m[1].toLowerCase() === "x";
+          // strip the "[ ] " marker from the visible text
+          first.content = m[2];
+
+          // build a disabled checkbox token
+          var box = new state.Token("html_inline", "", 0);
+          box.content = '<input class="task-list-item-checkbox" type="checkbox" disabled' +
+            (checked ? " checked" : "") + "> ";
+          children.unshift(box);
+
+          // mark the <li> and its parent <ul> for CSS (no bullet)
+          tokens[i - 2].attrJoin("class", "task-list-item");
+          // walk back to the bullet_list_open
+          for (var j = i - 2; j >= 0; j--) {
+            if (tokens[j].type === "bullet_list_open") {
+              tokens[j].attrJoin("class", "task-list");
+              break;
+            }
+            if (tokens[j].type === "ordered_list_open") break;
+          }
+        }
+        return true;
+      });
+    }
+    taskListPlugin(md);
+
+    /* ---- wrap tables for horizontal scroll on overflow --------------- */
+    var defaultTableOpen = md.renderer.rules.table_open ||
+      function (tokens, idx, options, env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+    var defaultTableClose = md.renderer.rules.table_close ||
+      function (tokens, idx, options, env, self) {
+        return self.renderToken(tokens, idx, options);
+      };
+    md.renderer.rules.table_open = function (tokens, idx, options, env, self) {
+      return '<div class="table-scroll">' + defaultTableOpen(tokens, idx, options, env, self);
+    };
+    md.renderer.rules.table_close = function (tokens, idx, options, env, self) {
+      return defaultTableClose(tokens, idx, options, env, self) + '</div>';
+    };
+
+    /* ---------------------------------------------------------------- *
+     * mermaid setup
+     * ---------------------------------------------------------------- */
+    var hasMermaid = typeof window.mermaid !== "undefined";
+    var currentTheme = "light";
+
+    function mermaidThemeFor(theme) {
+      return theme === "dark" ? "dark" : "default";
+    }
+
+    if (hasMermaid) {
+      window.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: mermaidThemeFor(currentTheme)
+      });
+    }
+
+    function runMermaid() {
+      if (!hasMermaid) return;
+      var nodes = document.querySelectorAll("#content .mermaid");
+      if (!nodes.length) return;
+      try {
+        window.mermaid.run({ nodes: nodes });
+      } catch (e) {
+        // mermaid.run rejects async on bad diagrams; swallow to keep page alive.
+        try { window.mermaid.run({ querySelector: "#content .mermaid" }); } catch (e2) {}
+      }
+    }
+
+    function rerenderMermaidForTheme(theme) {
+      if (!hasMermaid) return;
+      var nodes = document.querySelectorAll("#content .mermaid");
+      if (!nodes.length) return;
+      // Reset each node from its stored source and clear the processed flag.
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        var src = n.getAttribute("data-src");
+        if (src != null) {
+          // data-src is HTML-escaped; decode via textContent assignment.
+          var tmp = document.createElement("textarea");
+          tmp.innerHTML = src;
+          n.textContent = tmp.value;
+        }
+        n.removeAttribute("data-processed");
+      }
+      window.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: mermaidThemeFor(theme)
+      });
+      runMermaid();
+    }
+
+    /* ---------------------------------------------------------------- *
+     * KaTeX auto-render
+     * ---------------------------------------------------------------- */
+    function runKatex() {
+      if (typeof window.renderMathInElement !== "function") return;
+      try {
+        window.renderMathInElement(document.getElementById("content"), {
+          delimiters: [
+            { left: "$$", right: "$$", display: true },
+            { left: "$",  right: "$",  display: false }
+          ],
+          throwOnError: false
+        });
+      } catch (e) { /* keep page alive */ }
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Public API
+     * ---------------------------------------------------------------- */
+    function decodeB64(b64) {
+      return new TextDecoder().decode(
+        Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); })
+      );
+    }
+
+    window.renderMarkdownB64 = function (b64) {
+      var markdown;
+      try {
+        markdown = decodeB64(b64);
+      } catch (e) {
+        markdown = "";
+      }
+      var el = document.getElementById("content");
+      el.innerHTML = md.render(markdown);
+      runKatex();
+      runMermaid();
+    };
+
+    window.applySettings = function (settings) {
+      settings = settings || {};
+      var bodyKey = settings.bodyFont || "system";
+      var codeKey = settings.codeFont || "sfmono";
+      var size = settings.fontSizePx;
+      var theme = settings.theme === "dark" ? "dark" : "light";
+
+      var root = document.documentElement;
+
+      root.style.setProperty("--font-body", BODY_FONTS[bodyKey] || BODY_FONTS.system);
+      root.style.setProperty("--font-code", CODE_FONTS[codeKey] || CODE_FONTS.sfmono);
+      if (typeof size === "number" && isFinite(size) && size > 0) {
+        root.style.setProperty("--font-size", size + "px");
+      }
+
+      // Theme: data-theme drives the CSS palette.
+      var themeChanged = theme !== currentTheme;
+      root.setAttribute("data-theme", theme);
+
+      // Toggle highlight.js stylesheets.
+      var lightLink = document.getElementById("hljs-light");
+      var darkLink = document.getElementById("hljs-dark");
+      if (lightLink) lightLink.disabled = (theme === "dark");
+      if (darkLink) darkLink.disabled = (theme !== "dark");
+
+      // Re-render mermaid only when the theme actually changed (per contract).
+      currentTheme = theme;
+      if (themeChanged) {
+        rerenderMermaidForTheme(theme);
+      }
+    };
+
+    // Default appearance until Swift calls applySettings.
+    window.applySettings({
+      bodyFont: "system",
+      codeFont: "sfmono",
+      fontSizePx: 17,
+      theme: "light"
+    });
+  })();
+  </script>
+</body>
+</html>

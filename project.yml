@@ -1,0 +1,43 @@
+name: MarkDown4W
+options:
+  bundleIdPrefix: net.songha
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGNING_ALLOWED: "NO"
+targets:
+  MarkDown4W:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: MarkDown4W
+        excludes:
+          - "Renderer/**"
+      - path: MarkDown4W/Renderer
+        type: folder
+    settings:
+      base:
+        INFOPLIST_FILE: MarkDown4W/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: net.songha.MarkDown4W
+        PRODUCT_NAME: MarkDown4W
+        ENABLE_HARDENED_RUNTIME: "YES"
+        COMBINE_HIDPI_IMAGES: "YES"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: "NO"
+        ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+    entitlements:
+      path: MarkDown4W/MarkDown4W.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true

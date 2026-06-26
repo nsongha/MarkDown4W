@@ -1,0 +1,17 @@
+{
+  "name": "markdown4w-renderer-src",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vendoring source for the MarkDown4W web render layer. Installs JS libs and copies prebuilt browser builds into ../MarkDown4W/Renderer/vendor.",
+  "type": "module",
+  "scripts": {
+    "vendor": "./build-vendor.sh",
+    "validate": "node validate.mjs"
+  },
+  "dependencies": {
+    "@highlightjs/cdn-assets": "11.11.1",
+    "katex": "0.16.47",
+    "markdown-it": "14.2.0",
+    "mermaid": "11.16.0"
+  }
+}

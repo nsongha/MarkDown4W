@@ -1,0 +1,303 @@
+/* theme.css — MarkDown4W reading layout + light/dark palettes.
+   Colors come from CSS variables defined per data-theme. Fonts/size come from
+   --font-body / --font-code / --font-size set by applySettings() on :root. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ---- Palettes ---------------------------------------------------------- */
+
+:root {
+  /* Sensible fallbacks; Swift/applySettings overrides these. */
+  --font-body: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --font-code: "SF Mono", ui-monospace, Menlo, monospace;
+  --font-size: 17px;
+}
+
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --accent: #0969da;
+  --accent-muted: rgba(9, 105, 218, 0.12);
+  --code-bg: #f6f8fa;
+  --code-fg: #1a1a1a;
+  --inline-code-bg: rgba(175, 184, 193, 0.2);
+  --border: #d8dee4;
+  --blockquote-border: #d0d7de;
+  --table-header-bg: #f6f8fa;
+  --table-zebra: #fafbfc;
+  --hr: #d8dee4;
+  --selection: rgba(9, 105, 218, 0.2);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --fg: #e6e6e6;
+  --muted: #9aa0a6;
+  --accent: #6cb6ff;
+  --accent-muted: rgba(108, 182, 255, 0.16);
+  --code-bg: #2a2a2a;
+  --code-fg: #e6e6e6;
+  --inline-code-bg: rgba(110, 118, 129, 0.4);
+  --border: #3a3a3a;
+  --blockquote-border: #4a4a4a;
+  --table-header-bg: #2a2a2a;
+  --table-zebra: #242424;
+  --hr: #3a3a3a;
+  --selection: rgba(108, 182, 255, 0.28);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.25);
+}
+
+/* ---- Base -------------------------------------------------------------- */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-size);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+/* ---- Reading column ---------------------------------------------------- */
+
+#content {
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: 48px;
+}
+
+#content > :first-child {
+  margin-top: 0;
+}
+
+#content > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---- Headings ---------------------------------------------------------- */
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 1.8em 0 0.6em;
+}
+
+h1 {
+  font-size: 2em;
+  margin-top: 0.2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 { font-size: 1.25em; }
+h4 { font-size: 1.05em; }
+h5 { font-size: 0.95em; }
+h6 { font-size: 0.85em; color: var(--muted); }
+
+/* ---- Text -------------------------------------------------------------- */
+
+p {
+  margin: 0 0 1em;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+strong { font-weight: 700; }
+em { font-style: italic; }
+del { color: var(--muted); }
+
+/* ---- Blockquotes ------------------------------------------------------- */
+
+blockquote {
+  margin: 1em 0;
+  padding: 0.2em 1em;
+  color: var(--muted);
+  border-left: 4px solid var(--blockquote-border);
+}
+
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child { margin-bottom: 0; }
+
+blockquote blockquote {
+  margin: 0.6em 0;
+}
+
+/* ---- Lists ------------------------------------------------------------- */
+
+ul, ol {
+  margin: 0 0 1em;
+  padding-left: 1.6em;
+}
+
+li {
+  margin: 0.25em 0;
+}
+
+li > ul,
+li > ol {
+  margin: 0.25em 0;
+}
+
+/* Task lists: read-only checkboxes, no bullet. */
+ul.task-list,
+li.task-list-item {
+  list-style: none;
+}
+
+ul.task-list {
+  padding-left: 0.4em;
+}
+
+li.task-list-item {
+  padding-left: 0;
+}
+
+li.task-list-item input[type="checkbox"] {
+  margin: 0 0.5em 0 0;
+  vertical-align: middle;
+  cursor: default;
+}
+
+/* ---- Code -------------------------------------------------------------- */
+
+code, kbd, pre, samp {
+  font-family: var(--font-code);
+}
+
+/* inline code chip */
+code {
+  background: var(--inline-code-bg);
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  font-size: 0.88em;
+}
+
+pre {
+  margin: 1em 0;
+  padding: 1em;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border-radius: 8px;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+/* code inside a pre block: no chip styling */
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.85em;
+  color: inherit;
+}
+
+/* ---- Tables ------------------------------------------------------------ */
+
+/* wrapper for horizontal scroll on overflow */
+.table-scroll {
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95em;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 0.5em 0.85em;
+  text-align: left;
+}
+
+thead th {
+  background: var(--table-header-bg);
+  font-weight: 700;
+}
+
+tbody tr:nth-child(even) {
+  background: var(--table-zebra);
+}
+
+/* ---- Images, hr -------------------------------------------------------- */
+
+img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--hr);
+  margin: 2em 0;
+}
+
+/* ---- Mermaid ----------------------------------------------------------- */
+
+pre.mermaid {
+  background: transparent;
+  padding: 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
+/* ---- KaTeX ------------------------------------------------------------- */
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+}
+
+/* ---- Scrollbars (optional polish) ------------------------------------- */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
