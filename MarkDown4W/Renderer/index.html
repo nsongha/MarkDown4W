@@ -277,6 +277,21 @@
       }
     };
 
+    /* ---- Auto-hiding scrollbar -------------------------------------- *
+     * Reveal the overlay scrollbar only while scrolling, then fade it out
+     * after a short idle delay — matching native macOS overlay behaviour
+     * regardless of the system "Show scroll bars" preference. */
+    var scrollIdleTimer = null;
+    function flashScrollbar() {
+      document.documentElement.classList.add("is-scrolling");
+      clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = setTimeout(function () {
+        document.documentElement.classList.remove("is-scrolling");
+      }, 1100);
+    }
+    window.addEventListener("scroll", flashScrollbar, { passive: true });
+    window.addEventListener("wheel", flashScrollbar, { passive: true });
+
     // Default appearance until Swift calls applySettings.
     window.applySettings({
       bodyFont: "system",
