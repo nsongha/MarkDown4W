@@ -47,11 +47,17 @@ xcodegen generate
 # Build & run from Xcode
 open MarkDown4W.xcodeproj      # then press ⌘R
 
-# …or build from the command line
-xcodebuild -project MarkDown4W.xcodeproj -scheme MarkDown4W -configuration Debug \
-  -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-open build/Build/Products/Debug/MarkDown4W.app
+# …or build from the command line (ad-hoc signed so the App Sandbox applies)
+xcodebuild -project MarkDown4W.xcodeproj -scheme MarkDown4W -configuration Release \
+  -derivedDataPath build \
+  CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO build
+open build/Build/Products/Release/MarkDown4W.app
 ```
+
+The app runs in the macOS **App Sandbox**. The bundled web renderer is served to
+the `WKWebView` through a custom URL scheme (`BundleResourceSchemeHandler`) so it
+loads correctly inside the sandbox, and the `com.apple.security.network.client`
+entitlement is required for the web-content process to run.
 
 The rendered web assets are committed under `MarkDown4W/Renderer/vendor/`, so a normal
 build needs **no** npm step. To refresh them to newer library versions:
