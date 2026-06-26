@@ -21,6 +21,7 @@ struct ContentView: View {
                         fontSizePx: settings.fontSizePx,
                         theme: resolvedTheme)
             .ignoresSafeArea()
+            .background(WindowConfigurator())
             .toolbar {
                 MarkdownToolbar()
             }

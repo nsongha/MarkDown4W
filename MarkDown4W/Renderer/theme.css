@@ -83,7 +83,7 @@ body {
 /* ---- Reading column ---------------------------------------------------- */
 
 #content {
-  max-width: 72ch;
+  max-width: 80ch;
   margin: 0 auto;
   padding: 48px;
 }
