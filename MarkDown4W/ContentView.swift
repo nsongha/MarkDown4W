@@ -29,28 +29,25 @@ struct ContentView: View {
     }
 
     var body: some View {
-        MarkdownWebView(markdown: document.text,
-                        bodyFont: settings.bodyFont,
-                        fontSizePx: settings.fontSizePx,
-                        theme: resolvedTheme,
-                        proxy: webProxy)
-            .ignoresSafeArea()
-            .background(WindowConfigurator())
-            .overlay(alignment: .topTrailing) {
-                if showFind {
-                    FindBar(proxy: webProxy, isPresented: $showFind)
-                        .padding(.top, 12)
-                        .padding(.trailing, 16)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
+        VStack(spacing: 0) {
+            if showFind {
+                FindBar(proxy: webProxy, isPresented: $showFind)
             }
-            .toolbar {
-                MarkdownToolbar(title: title)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .mdShowFind)) { _ in
-                // Only the active (key) window/tab should reveal its find bar.
-                guard controlActiveState == .key else { return }
-                showFind = true
-            }
+            MarkdownWebView(markdown: document.text,
+                            bodyFont: settings.bodyFont,
+                            fontSizePx: settings.fontSizePx,
+                            theme: resolvedTheme,
+                            proxy: webProxy)
+        }
+        .ignoresSafeArea(edges: showFind ? [] : .all)
+        .background(WindowConfigurator(resolvedTheme: resolvedTheme))
+        .toolbar {
+            MarkdownToolbar(title: title)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .mdShowFind)) { _ in
+            // Only the active (key) window/tab should reveal its find bar.
+            guard controlActiveState == .key else { return }
+            showFind = true
+        }
     }
 }

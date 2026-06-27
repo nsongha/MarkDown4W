@@ -11,10 +11,21 @@ struct MarkdownToolbar: ToolbarContent {
     let title: String
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Text(title)
-                .font(.headline)
-                .lineLimit(1)
+        // The centered filename is plain text, not a control — hide the glass
+        // capsule that macOS 26 draws behind toolbar items.
+        if #available(macOS 26.0, *) {
+            ToolbarItem(placement: .principal) {
+                Text(title)
+                    .font(.headline)
+                    .lineLimit(1)
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .principal) {
+                Text(title)
+                    .font(.headline)
+                    .lineLimit(1)
+            }
         }
 
         ToolbarItem(placement: .primaryAction) {

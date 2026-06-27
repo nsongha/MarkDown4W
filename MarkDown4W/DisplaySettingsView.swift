@@ -19,6 +19,7 @@ struct DisplaySettingsView: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
+                .frame(maxWidth: .infinity)
             }
 
             Divider()
@@ -51,21 +52,20 @@ struct DisplaySettingsView: View {
 
             // MARK: Text Size
             section("Text Size") {
-                Slider(
-                    value: Binding(
-                        get: { Double(settings.fontLevel) },
-                        set: { settings.fontLevel = Int($0.rounded()) }
-                    ),
-                    in: 0...4,
-                    step: 1,
-                    minimumValueLabel: Image(systemName: "textformat.size.smaller"),
-                    maximumValueLabel: Image(systemName: "textformat.size.larger")
-                ) {
-                    Text("Text Size")
+                HStack(spacing: 10) {
+                    Image(systemName: "textformat.size.smaller")
+                        .foregroundStyle(.secondary)
+                    Slider(
+                        value: Binding(
+                            get: { Double(settings.fontLevel) },
+                            set: { settings.fontLevel = Int($0.rounded()) }
+                        ),
+                        in: 0...4,
+                        step: 1
+                    )
+                    Image(systemName: "textformat.size.larger")
+                        .foregroundStyle(.secondary)
                 }
-                Text("\(settings.fontSizePx) px")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Divider()

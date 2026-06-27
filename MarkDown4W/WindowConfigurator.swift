@@ -26,16 +26,35 @@ struct WindowConfigurator: NSViewRepresentable {
     /// Shared identifier so newly opened documents tab into the same window.
     static let tabbingIdentifier = "net.songha.MarkDown4W.document"
 
+    /// Resolved shade ("light"/"sepia"/"dark") — drives the titlebar appearance
+    /// so the window header darkens with the Dark theme.
+    var resolvedTheme: String = "light"
+
     func makeNSView(context: Context) -> NSView {
         let view = NSView(frame: .zero)
+        let theme = resolvedTheme
         DispatchQueue.main.async { [weak view] in
             guard let window = view?.window else { return }
             Self.configure(window, coordinator: context.coordinator)
+            Self.applyAppearance(theme, to: window)
         }
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    func updateNSView(_ nsView: NSView, context: Context) {
+        let theme = resolvedTheme
+        DispatchQueue.main.async { [weak nsView] in
+            guard let window = nsView?.window else { return }
+            Self.applyAppearance(theme, to: window)
+        }
+    }
+
+    /// Match the window chrome (titlebar/toolbar) to the chosen shade: dark for
+    /// the Dark theme, light otherwise (light/sepia are light backgrounds).
+    private static func applyAppearance(_ theme: String, to window: NSWindow) {
+        let name: NSAppearance.Name = (theme == "dark") ? .darkAqua : .aqua
+        window.appearance = NSAppearance(named: name)
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
