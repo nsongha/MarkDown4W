@@ -145,6 +145,10 @@ body,
   margin: 0 auto;
   /* Less top padding so the first heading sits closer to the title bar. */
   padding: 28px 48px 48px;
+  /* Break long unbroken tokens (long URLs, hashes, base64 blobs) so they stay
+     inside the reading column instead of forcing horizontal page scroll. */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 #content > :first-child {
