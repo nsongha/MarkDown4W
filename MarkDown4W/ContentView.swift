@@ -58,6 +58,10 @@ struct ContentView: View {
             // shade changes — so the title bar matches each theme without snapping.
             .toolbarBackground(titlebarColor, for: .windowToolbar)
             .toolbarBackground(.visible, for: .windowToolbar)
+            // Drive the whole window's appearance from the chosen shade (not the
+            // system), so the system title text + gear render dark on light/sepia
+            // and light on dark.
+            .preferredColorScheme(resolvedTheme == "dark" ? .dark : .light)
             .animation(.easeInOut(duration: 0.6), value: resolvedTheme)
         .onReceive(NotificationCenter.default.publisher(for: .mdShowFind)) { _ in
             // Only the active (key) window/tab should reveal its find bar.
