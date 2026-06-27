@@ -86,6 +86,25 @@ the `WKWebView` through a custom URL scheme (`BundleResourceSchemeHandler`) so i
 loads correctly inside the sandbox, and the `com.apple.security.network.client`
 entitlement is required for the web-content process to run.
 
+### Versioning
+
+The version is defined once in `project.yml` (`MARKETING_VERSION` →
+`CFBundleShortVersionString`, `CURRENT_PROJECT_VERSION` → `CFBundleVersion`) and
+flows into the bundle at build time. Bump it with the helper script, which always
+increments the build number so each build is uniquely identifiable in
+**MarkDown4W ▸ About** — handy for confirming which binary is actually running:
+
+```sh
+scripts/bump-version.sh               # just bump the build number
+scripts/bump-version.sh patch         # 0.1.0 -> 0.1.1 (+ build number)
+scripts/bump-version.sh minor         # 0.1.0 -> 0.2.0 (+ build number)
+scripts/bump-version.sh 1.2.3         # set the marketing version explicitly
+scripts/bump-version.sh patch --tag   # also git-commit + tag v0.1.1
+```
+
+The script regenerates the Xcode project, so the new version takes effect on the
+next build.
+
 The rendered web assets are committed under `MarkDown4W/Renderer/vendor/`, so a
 normal build needs **no** npm step. To refresh them to newer library versions:
 
@@ -137,6 +156,7 @@ Source layout:
 | `MarkDown4W/ShortcutRecorderView.swift`, `ShortcutsEditorView.swift` | Inline shortcut editor |
 | `MarkDown4W/Renderer/` | Bundled web layer (`index.html`, `theme.css`, `vendor/`) |
 | `renderer-src/` | npm project + script that vendors the JS libs |
+| `scripts/bump-version.sh` | Bump the marketing / build version (see [Versioning](#versioning)) |
 
 ## Author
 

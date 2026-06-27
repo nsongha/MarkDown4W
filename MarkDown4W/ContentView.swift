@@ -46,6 +46,9 @@ struct ContentView: View {
                 if showFind {
                     FindBar(proxy: webProxy, isPresented: $showFind,
                             barColor: titlebarColor, isDark: resolvedTheme == "dark")
+                        // Slide down from under the title bar (and fade) on show,
+                        // slide back up on hide — like the native find bar.
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
             .background(WindowConfigurator(resolvedTheme: resolvedTheme))
@@ -64,7 +67,8 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .mdShowFind)) { _ in
             // Only the active (key) window/tab should reveal its find bar.
             guard controlActiveState == .key else { return }
-            showFind = true
+            // Animate so the bar slides in (paired with FindBar's .transition).
+            withAnimation(.easeOut(duration: 0.22)) { showFind = true }
         }
     }
 }

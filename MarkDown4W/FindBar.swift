@@ -137,6 +137,7 @@ struct FindBar: View {
         query = ""
         result = .none
         proxy.clearFind()
-        isPresented = false
+        // Animate so the bar slides back up (paired with its .transition).
+        withAnimation(.easeIn(duration: 0.2)) { isPresented = false }
     }
 }
