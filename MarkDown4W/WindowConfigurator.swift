@@ -23,13 +23,14 @@ struct WindowConfigurator: NSViewRepresentable {
     /// Upper bound on window height so large displays stay reasonable.
     private static let maxHeight: CGFloat = 1160
 
+    /// Shared identifier so newly opened documents tab into the same window.
+    static let tabbingIdentifier = "net.songha.MarkDown4W.document"
+
     func makeNSView(context: Context) -> NSView {
         let view = NSView(frame: .zero)
         DispatchQueue.main.async { [weak view] in
-            guard let window = view?.window,
-                  !context.coordinator.didConfigure else { return }
-            context.coordinator.didConfigure = true
-            Self.applyDefaultSize(to: window)
+            guard let window = view?.window else { return }
+            Self.configure(window, coordinator: context.coordinator)
         }
         return view
     }
@@ -40,6 +41,35 @@ struct WindowConfigurator: NSViewRepresentable {
 
     final class Coordinator {
         var didConfigure = false
+    }
+
+    private static func configure(_ window: NSWindow, coordinator: Coordinator) {
+        guard !coordinator.didConfigure else { return }
+        coordinator.didConfigure = true
+
+        window.tabbingIdentifier = tabbingIdentifier
+        window.tabbingMode = .preferred
+
+        // Unified title bar; the centered filename is drawn by a principal
+        // toolbar item, so hide the default (leading) titlebar text. The window
+        // title is still set, so tab labels remain correct.
+        window.toolbarStyle = .unified
+        window.titleVisibility = .hidden
+
+        // SwiftUI's DocumentGroup opens each document as its own window and sets
+        // tabbingMode too late to auto-tab, so attach explicitly: if another
+        // document window already exists, add this one as a tab to it. Otherwise
+        // it's the first window — give it the default size.
+        if let host = NSApp.windows.first(where: { other in
+            other !== window
+                && other.tabbingIdentifier == tabbingIdentifier
+                && other.isVisible
+        }) {
+            host.addTabbedWindow(window, ordered: .above)
+            window.makeKeyAndOrderFront(nil)
+        } else {
+            applyDefaultSize(to: window)
+        }
     }
 
     private static func applyDefaultSize(to window: NSWindow) {

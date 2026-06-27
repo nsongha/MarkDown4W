@@ -250,7 +250,8 @@
       var bodyKey = settings.bodyFont || "system";
       var codeKey = settings.codeFont || "sfmono";
       var size = settings.fontSizePx;
-      var theme = settings.theme === "dark" ? "dark" : "light";
+      var ALLOWED = { light: 1, sepia: 1, dark: 1 };
+      var theme = ALLOWED[settings.theme] ? settings.theme : "light";
 
       var root = document.documentElement;
 
@@ -264,11 +265,13 @@
       var themeChanged = theme !== currentTheme;
       root.setAttribute("data-theme", theme);
 
-      // Toggle highlight.js stylesheets.
+      // Toggle highlight.js stylesheets: light AND sepia use the light sheet;
+      // only dark uses the dark sheet.
+      var isDark = theme === "dark";
       var lightLink = document.getElementById("hljs-light");
       var darkLink = document.getElementById("hljs-dark");
-      if (lightLink) lightLink.disabled = (theme === "dark");
-      if (darkLink) darkLink.disabled = (theme !== "dark");
+      if (lightLink) lightLink.disabled = isDark;
+      if (darkLink) darkLink.disabled = !isDark;
 
       // Re-render mermaid only when the theme actually changed (per contract).
       currentTheme = theme;

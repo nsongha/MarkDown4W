@@ -2,6 +2,30 @@ import SwiftUI
 import WebKit
 import AppKit
 
+/// Bridge that lets `ContentView`'s find bar drive the hosted `WKWebView`'s
+/// native incremental find. The web-view reference is assigned in
+/// `MarkdownWebView.makeNSView`.
+final class WebViewProxy: ObservableObject {
+    weak var webView: WKWebView?
+
+    /// Run a native find; `completion` reports whether a match was found.
+    func find(_ query: String, forward: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        guard let webView = webView, !query.isEmpty else { completion?(false); return }
+        let config = WKFindConfiguration()
+        config.backwards = !forward
+        config.caseSensitive = false
+        config.wraps = true
+        webView.find(query, configuration: config) { result in
+            completion?(result.matchFound)
+        }
+    }
+
+    /// Clear the current find highlight/selection (on closing the find bar).
+    func clearSelection() {
+        webView?.evaluateJavaScript("window.getSelection().removeAllRanges();", completionHandler: nil)
+    }
+}
+
 /// Hosts the bundled HTML renderer (`Renderer/index.html`) in a `WKWebView`
 /// and drives it via JavaScript.
 ///
@@ -18,8 +42,10 @@ struct MarkdownWebView: NSViewRepresentable {
     let bodyFont: String
     /// Body font size in px.
     let fontSizePx: Int
-    /// Concrete theme — already resolved to "light" or "dark" by the caller.
+    /// Concrete shade — resolved to "light", "sepia", or "dark" by the caller.
     let theme: String
+    /// Bridge for the find bar; receives the web-view reference on creation.
+    var proxy: WebViewProxy? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -42,6 +68,8 @@ struct MarkdownWebView: NSViewRepresentable {
             scrollView.verticalScrollElasticity = .none
             scrollView.horizontalScrollElasticity = .none
         }
+
+        proxy?.webView = webView
 
         loadRenderer(into: webView)
         return webView
