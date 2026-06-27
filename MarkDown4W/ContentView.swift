@@ -32,6 +32,7 @@ struct ContentView: View {
         VStack(spacing: 0) {
             if showFind {
                 FindBar(proxy: webProxy, isPresented: $showFind)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
             MarkdownWebView(markdown: document.text,
                             bodyFont: settings.bodyFont,
@@ -40,6 +41,7 @@ struct ContentView: View {
                             proxy: webProxy)
         }
         .ignoresSafeArea(edges: showFind ? [] : .all)
+        .animation(.easeInOut(duration: 0.2), value: showFind)
         .background(WindowConfigurator(resolvedTheme: resolvedTheme))
         .toolbar {
             MarkdownToolbar(title: title)

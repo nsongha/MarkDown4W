@@ -1,20 +1,24 @@
 import SwiftUI
 
 /// A native-style find bar: a full-width strip below the title bar (like the
-/// find bar in TextEdit/Pages), with a rounded search field, prev/next
-/// navigation, and a Done button. Drives the web view's native find.
+/// find bar in TextEdit/Pages), with a rounded search field, a result count,
+/// prev/next navigation, and a Done button. Drives the in-page find engine
+/// which highlights and boxes all matches.
 struct FindBar: View {
     @ObservedObject var proxy: WebViewProxy
     @Binding var isPresented: Bool
 
     @State private var query = ""
-    @State private var found = true
+    @State private var result = FindResult.none
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 searchField
+
+                countLabel
+                    .frame(minWidth: 64, alignment: .leading)
 
                 // Prev / next segmented navigation.
                 HStack(spacing: 0) {
@@ -26,12 +30,6 @@ struct FindBar: View {
                     RoundedRectangle(cornerRadius: 6)
                         .strokeBorder(Color.primary.opacity(0.12))
                 )
-
-                if !query.isEmpty && !found {
-                    Text("Not found")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
 
                 Spacer()
 
@@ -57,10 +55,10 @@ struct FindBar: View {
             TextField("Search", text: $query)
                 .textFieldStyle(.plain)
                 .focused($fieldFocused)
-                .onSubmit { runFind(forward: true) }
-                .onChange(of: query) { _, _ in runFind(forward: true) }
+                .onSubmit { step(forward: true) }
+                .onChange(of: query) { _, _ in runFind() }
             if !query.isEmpty {
-                Button { query = ""; proxy.clearSelection() } label: {
+                Button { query = "" } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
                 }
@@ -78,30 +76,49 @@ struct FindBar: View {
             RoundedRectangle(cornerRadius: 6)
                 .strokeBorder(Color.primary.opacity(0.12))
         )
-        .frame(width: 240)
+        .frame(width: 220)
+    }
+
+    @ViewBuilder
+    private var countLabel: some View {
+        if query.isEmpty {
+            EmptyView()
+        } else if result.total == 0 {
+            Text("No results")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        } else {
+            Text("\(result.current) of \(result.total)")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
     }
 
     private func navButton(systemImage: String, forward: Bool) -> some View {
-        Button { runFind(forward: forward) } label: {
+        Button { step(forward: forward) } label: {
             Image(systemName: systemImage)
                 .font(.system(size: 11, weight: .medium))
                 .frame(width: 24, height: 20)
         }
         .buttonStyle(.plain)
-        .disabled(query.isEmpty)
+        .disabled(result.total == 0)
     }
 
-    private func runFind(forward: Bool) {
-        guard !query.isEmpty else { found = true; return }
-        proxy.find(query, forward: forward) { matched in
-            found = matched
-        }
+    private func runFind() {
+        guard !query.isEmpty else { result = .none; proxy.clearFind(); return }
+        proxy.find(query) { result = $0 }
+    }
+
+    private func step(forward: Bool) {
+        guard result.total > 0 else { runFind(); return }
+        proxy.findStep(forward: forward) { result = $0 }
     }
 
     private func close() {
-        isPresented = false
         query = ""
-        found = true
-        proxy.clearSelection()
+        result = .none
+        proxy.clearFind()
+        isPresented = false
     }
 }

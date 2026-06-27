@@ -2,27 +2,47 @@ import SwiftUI
 import WebKit
 import AppKit
 
-/// Bridge that lets `ContentView`'s find bar drive the hosted `WKWebView`'s
-/// native incremental find. The web-view reference is assigned in
+/// A find result: 1-based `current` match and `total` count (both 0 = none).
+struct FindResult {
+    var current: Int
+    var total: Int
+    static let none = FindResult(current: 0, total: 0)
+}
+
+/// Bridge that lets `ContentView`'s find bar drive the in-page find engine
+/// (`window.mdFind` / `mdFindStep` / `mdFindClear`), which highlights and boxes
+/// all matches and reports a count. The web-view reference is assigned in
 /// `MarkdownWebView.makeNSView`.
 final class WebViewProxy: ObservableObject {
     weak var webView: WKWebView?
 
-    /// Run a native find; `completion` reports whether a match was found.
-    func find(_ query: String, forward: Bool = true, completion: ((Bool) -> Void)? = nil) {
-        guard let webView = webView, !query.isEmpty else { completion?(false); return }
-        let config = WKFindConfiguration()
-        config.backwards = !forward
-        config.caseSensitive = false
-        config.wraps = true
-        webView.find(query, configuration: config) { result in
-            completion?(result.matchFound)
+    /// Highlight all matches of `query`; reports the count and current index.
+    func find(_ query: String, completion: ((FindResult) -> Void)? = nil) {
+        guard let webView = webView, !query.isEmpty else { completion?(.none); return }
+        let b64 = Data(query.utf8).base64EncodedString()
+        webView.evaluateJavaScript("window.mdFind('\(b64)');") { value, _ in
+            completion?(Self.parse(value))
         }
     }
 
-    /// Clear the current find highlight/selection (on closing the find bar).
-    func clearSelection() {
-        webView?.evaluateJavaScript("window.getSelection().removeAllRanges();", completionHandler: nil)
+    /// Move to the next/previous match; reports the new count and current index.
+    func findStep(forward: Bool, completion: ((FindResult) -> Void)? = nil) {
+        guard let webView = webView else { completion?(.none); return }
+        webView.evaluateJavaScript("window.mdFindStep(\(forward ? "true" : "false"));") { value, _ in
+            completion?(Self.parse(value))
+        }
+    }
+
+    /// Clear all find highlights (on closing the find bar).
+    func clearFind() {
+        webView?.evaluateJavaScript("window.mdFindClear();", completionHandler: nil)
+    }
+
+    private static func parse(_ value: Any?) -> FindResult {
+        guard let dict = value as? [String: Any] else { return .none }
+        let total = (dict["count"] as? Int) ?? (dict["count"] as? NSNumber)?.intValue ?? 0
+        let current = (dict["current"] as? Int) ?? (dict["current"] as? NSNumber)?.intValue ?? 0
+        return FindResult(current: current, total: total)
     }
 }
 

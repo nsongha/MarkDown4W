@@ -241,6 +241,8 @@
       }
       var el = document.getElementById("content");
       el.innerHTML = md.render(markdown);
+      findState.marks = [];
+      findState.index = -1;
       runKatex();
       runMermaid();
     };
@@ -278,6 +280,101 @@
       if (themeChanged) {
         rerenderMermaidForTheme(theme);
       }
+    };
+
+    /* ---------------------------------------------------------------- *
+     * Find: highlight + box ALL matches, track count + current index.
+     * Returns { count, current } (current is 1-based; 0 when none).
+     * ---------------------------------------------------------------- */
+    var findState = { marks: [], index: -1, query: "" };
+
+    function clearFindMarks() {
+      for (var i = 0; i < findState.marks.length; i++) {
+        var m = findState.marks[i];
+        var parent = m.parentNode;
+        if (parent) {
+          parent.replaceChild(document.createTextNode(m.textContent), m);
+          parent.normalize();
+        }
+      }
+      findState.marks = [];
+      findState.index = -1;
+    }
+
+    function setCurrentMatch(i) {
+      if (findState.index >= 0 && findState.marks[findState.index]) {
+        findState.marks[findState.index].classList.remove("md-find-current");
+      }
+      findState.index = i;
+      var m = findState.marks[i];
+      if (m) {
+        m.classList.add("md-find-current");
+        m.scrollIntoView({ block: "center", inline: "nearest" });
+      }
+    }
+
+    window.mdFind = function (b64) {
+      var query;
+      try { query = decodeB64(b64); } catch (e) { query = ""; }
+      clearFindMarks();
+      findState.query = query;
+      if (!query) return { count: 0, current: 0 };
+
+      var root = document.getElementById("content");
+      var lower = query.toLowerCase();
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function (node) {
+          if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
+          var p = node.parentNode;
+          if (p && (p.nodeName === "SCRIPT" || p.nodeName === "STYLE")) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      var textNodes = [];
+      var node;
+      while ((node = walker.nextNode())) textNodes.push(node);
+
+      for (var ti = 0; ti < textNodes.length; ti++) {
+        var tn = textNodes[ti];
+        var text = tn.nodeValue;
+        var hay = text.toLowerCase();
+        var idx = hay.indexOf(lower);
+        if (idx === -1) continue;
+        var frag = document.createDocumentFragment();
+        var pos = 0;
+        while (idx !== -1) {
+          if (idx > pos) frag.appendChild(document.createTextNode(text.slice(pos, idx)));
+          var mark = document.createElement("mark");
+          mark.className = "md-find";
+          mark.textContent = text.slice(idx, idx + query.length);
+          frag.appendChild(mark);
+          findState.marks.push(mark);
+          pos = idx + query.length;
+          idx = hay.indexOf(lower, pos);
+        }
+        if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+        tn.parentNode.replaceChild(frag, tn);
+      }
+
+      if (findState.marks.length) setCurrentMatch(0);
+      return { count: findState.marks.length, current: findState.marks.length ? 1 : 0 };
+    };
+
+    window.mdFindStep = function (forward) {
+      var count = findState.marks.length;
+      if (!count) return { count: 0, current: 0 };
+      var i = findState.index + (forward ? 1 : -1);
+      if (i < 0) i = count - 1;
+      if (i >= count) i = 0;
+      setCurrentMatch(i);
+      return { count: count, current: i + 1 };
+    };
+
+    window.mdFindClear = function () {
+      clearFindMarks();
+      findState.query = "";
     };
 
     /* ---- Auto-hiding scrollbar -------------------------------------- *

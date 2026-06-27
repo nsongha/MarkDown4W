@@ -36,22 +36,27 @@ struct WindowConfigurator: NSViewRepresentable {
         DispatchQueue.main.async { [weak view] in
             guard let window = view?.window else { return }
             Self.configure(window, coordinator: context.coordinator)
-            Self.applyAppearance(theme, to: window)
+            Self.applyAppearance(theme, to: window, coordinator: context.coordinator)
         }
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
         let theme = resolvedTheme
+        // Only react when the shade actually changed (avoids re-setting the
+        // window appearance on unrelated SwiftUI updates, which caused flicker).
+        guard theme != context.coordinator.appliedAppearance else { return }
         DispatchQueue.main.async { [weak nsView] in
             guard let window = nsView?.window else { return }
-            Self.applyAppearance(theme, to: window)
+            Self.applyAppearance(theme, to: window, coordinator: context.coordinator)
         }
     }
 
     /// Match the window chrome (titlebar/toolbar) to the chosen shade: dark for
     /// the Dark theme, light otherwise (light/sepia are light backgrounds).
-    private static func applyAppearance(_ theme: String, to window: NSWindow) {
+    private static func applyAppearance(_ theme: String, to window: NSWindow, coordinator: Coordinator) {
+        guard theme != coordinator.appliedAppearance else { return }
+        coordinator.appliedAppearance = theme
         let name: NSAppearance.Name = (theme == "dark") ? .darkAqua : .aqua
         window.appearance = NSAppearance(named: name)
     }
@@ -60,6 +65,7 @@ struct WindowConfigurator: NSViewRepresentable {
 
     final class Coordinator {
         var didConfigure = false
+        var appliedAppearance: String?
     }
 
     private static func configure(_ window: NSWindow, coordinator: Coordinator) {
