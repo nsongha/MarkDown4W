@@ -58,13 +58,26 @@ struct WindowConfigurator: NSViewRepresentable {
         }
     }
 
-    /// Match the window chrome (titlebar/toolbar) to the chosen shade: dark for
-    /// the Dark theme, light otherwise (light/sepia are light backgrounds).
+    /// Window background per shade — also shows through the transparent titlebar
+    /// so the title bar matches the theme exactly (not a generic chrome color).
+    private static func backgroundColor(for theme: String) -> NSColor {
+        switch theme {
+        case "dark":  return NSColor(srgbRed: 0x1e/255, green: 0x1e/255, blue: 0x1e/255, alpha: 1)
+        case "sepia": return NSColor(srgbRed: 0xf4/255, green: 0xec/255, blue: 0xd8/255, alpha: 1)
+        default:      return NSColor(srgbRed: 0xfa/255, green: 0xf9/255, blue: 0xf7/255, alpha: 1) // light
+        }
+    }
+
+    /// Match the window chrome to the chosen shade. The titlebar is transparent
+    /// (set in `configure`) and shows `backgroundColor`, so the title bar takes
+    /// on each theme's color. The appearance only drives control contrast
+    /// (traffic lights, title text, gear icon): dark for Dark, light otherwise.
     private static func applyAppearance(_ theme: String, to window: NSWindow, coordinator: Coordinator) {
         guard theme != coordinator.appliedAppearance else { return }
         coordinator.appliedAppearance = theme
         let name: NSAppearance.Name = (theme == "dark") ? .darkAqua : .aqua
         window.appearance = NSAppearance(named: name)
+        window.backgroundColor = backgroundColor(for: theme)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -81,11 +94,8 @@ struct WindowConfigurator: NSViewRepresentable {
         window.tabbingIdentifier = tabbingIdentifier
         window.tabbingMode = .preferred
 
-        // Unified title bar; the centered filename is drawn by a principal
-        // toolbar item, so hide the default (leading) titlebar text. The window
-        // title is still set, so tab labels remain correct.
+        // Unified title bar; the system shows the document filename as the title.
         window.toolbarStyle = .unified
-        window.titleVisibility = .hidden
 
         // SwiftUI's DocumentGroup opens each document as its own window and sets
         // tabbingMode too late to auto-tab, so attach explicitly: if another

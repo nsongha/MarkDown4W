@@ -9,13 +9,6 @@ struct ContentView: View {
 
     /// The document being viewed (read-only).
     let document: MarkdownDocument
-    /// The document's file URL (for the centered title); nil if unsaved.
-    var fileURL: URL? = nil
-
-    /// Filename without extension, shown centered in the title bar.
-    private var title: String {
-        fileURL?.deletingPathExtension().lastPathComponent ?? "MarkDown4W"
-    }
 
     /// Bridge to drive the web view's native find from the find bar.
     @StateObject private var webProxy = WebViewProxy()
@@ -28,13 +21,25 @@ struct ContentView: View {
         settings.resolvedTheme(systemIsDark: colorScheme == .dark)
     }
 
+    /// The title-bar background per shade (matches the renderer's `--bg`), so the
+    /// toolbar takes on each theme's color and SwiftUI cross-fades it on change.
+    private var titlebarColor: Color {
+        switch resolvedTheme {
+        case "dark":  return Color(red: 0x1e/255, green: 0x1e/255, blue: 0x1e/255)
+        case "sepia": return Color(red: 0xf4/255, green: 0xec/255, blue: 0xd8/255)
+        default:      return Color(red: 0xfa/255, green: 0xf9/255, blue: 0xf7/255)
+        }
+    }
+
     var body: some View {
         MarkdownWebView(markdown: document.text,
                         bodyFont: settings.bodyFont,
                         fontSizePx: settings.fontSizePx,
                         theme: resolvedTheme,
                         proxy: webProxy)
-            .ignoresSafeArea()
+            // Respect the top safe area so content sits below the (opaque,
+            // themed) toolbar; extend to the other edges.
+            .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
             // Find bar lives in the top safe-area inset, so toggling it pushes
             // the content without the full-window relayout that caused flicker.
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -46,8 +51,13 @@ struct ContentView: View {
             .animation(.easeInOut(duration: 0.2), value: showFind)
             .background(WindowConfigurator(resolvedTheme: resolvedTheme))
             .toolbar {
-                MarkdownToolbar(title: title)
+                MarkdownToolbar()
             }
+            // Themed, opaque toolbar background that SwiftUI cross-fades when the
+            // shade changes — so the title bar matches each theme without snapping.
+            .toolbarBackground(titlebarColor, for: .windowToolbar)
+            .toolbarBackground(.visible, for: .windowToolbar)
+            .animation(.easeInOut(duration: 0.6), value: resolvedTheme)
         .onReceive(NotificationCenter.default.publisher(for: .mdShowFind)) { _ in
             // Only the active (key) window/tab should reveal its find bar.
             guard controlActiveState == .key else { return }

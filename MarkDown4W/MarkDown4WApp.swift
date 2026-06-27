@@ -11,7 +11,7 @@ struct MarkDown4WApp: App {
 
     var body: some Scene {
         DocumentGroup(viewing: MarkdownDocument.self) { file in
-            ContentView(document: file.document, fileURL: file.fileURL)
+            ContentView(document: file.document)
                 .environmentObject(settings)
         }
         .commands {
@@ -22,6 +22,10 @@ struct MarkDown4WApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("New Tab…") { MarkDown4WApp.presentOpenPanel() }
             }
+            // Remove the default Find menu items: their ⌘F key-equivalent made
+            // the Edit menu flash before our shortcut monitor handled the key.
+            // Find is driven entirely by ShortcutMonitor → the find bar.
+            CommandGroup(replacing: .textEditing) { }
         }
 
         // ⌘, Settings window — same controls as the toolbar popover.
