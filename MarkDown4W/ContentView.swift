@@ -44,7 +44,8 @@ struct ContentView: View {
             // the content without the full-window relayout that caused flicker.
             .safeAreaInset(edge: .top, spacing: 0) {
                 if showFind {
-                    FindBar(proxy: webProxy, isPresented: $showFind)
+                    FindBar(proxy: webProxy, isPresented: $showFind,
+                            barColor: titlebarColor, isDark: resolvedTheme == "dark")
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }

@@ -67,21 +67,6 @@ struct DisplaySettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            Divider()
-
-            // MARK: Keyboard Shortcuts
-            section("Keyboard Shortcuts") {
-                VStack(spacing: 6) {
-                    ForEach(ShortcutAction.allCases) { action in
-                        HStack {
-                            Text(action.title)
-                            Spacer()
-                            ShortcutRecorderView(action: action)
-                        }
-                    }
-                }
-            }
         }
         .padding(16)
         .frame(width: 300)

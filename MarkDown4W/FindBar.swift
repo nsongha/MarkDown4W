@@ -7,6 +7,10 @@ import SwiftUI
 struct FindBar: View {
     @ObservedObject var proxy: WebViewProxy
     @Binding var isPresented: Bool
+    /// Theme background so the bar matches the current shade (not a fixed material).
+    var barColor: Color
+    /// Whether the current shade is dark (drives field color + control contrast).
+    var isDark: Bool
 
     @State private var query = ""
     @State private var result = FindResult.none
@@ -39,10 +43,13 @@ struct FindBar: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .frame(maxWidth: .infinity)
-            .background(.bar)
+            .background(barColor)
 
             Divider()
         }
+        // Resolve SwiftUI control colors against the chosen shade, not the
+        // system appearance (the window may be light while macOS is dark).
+        .environment(\.colorScheme, isDark ? .dark : .light)
         .onExitCommand { close() }
         .onAppear { fieldFocused = true }
     }
@@ -70,7 +77,7 @@ struct FindBar: View {
         .padding(.vertical, 4)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(Color(nsColor: .textBackgroundColor))
+                .fill(isDark ? Color(white: 0.18) : .white)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 6)
@@ -103,6 +110,8 @@ struct FindBar: View {
         }
         .buttonStyle(.plain)
         .disabled(result.total == 0)
+        // ⌘G = next, ⌘⇧G = previous (standard macOS find navigation).
+        .keyboardShortcut("g", modifiers: forward ? .command : [.command, .shift])
     }
 
     private func runFind() {

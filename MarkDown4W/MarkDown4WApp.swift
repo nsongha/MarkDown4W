@@ -9,6 +9,8 @@ struct MarkDown4WApp: App {
     @StateObject private var settings = AppSettings.shared
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    static let shortcutsWindowID = "shortcuts"
+
     var body: some Scene {
         DocumentGroup(viewing: MarkdownDocument.self) { file in
             ContentView(document: file.document)
@@ -26,6 +28,8 @@ struct MarkDown4WApp: App {
             // the Edit menu flash before our shortcut monitor handled the key.
             // Find is driven entirely by ShortcutMonitor → the find bar.
             CommandGroup(replacing: .textEditing) { }
+            // Keyboard-shortcut editor, reached from the menu bar like other apps.
+            ShortcutEditorCommand()
         }
 
         // ⌘, Settings window — same controls as the toolbar popover.
@@ -33,6 +37,13 @@ struct MarkDown4WApp: App {
             DisplaySettingsView()
                 .environmentObject(settings)
         }
+
+        // Editor window for customizing shortcuts (opened via the menu command).
+        Window("Keyboard Shortcuts", id: Self.shortcutsWindowID) {
+            ShortcutsEditorView()
+                .environmentObject(settings)
+        }
+        .windowResizability(.contentSize)
     }
 
     /// Open one or more markdown files; each opens within the app (as a tab when
@@ -51,6 +62,21 @@ struct MarkDown4WApp: App {
             for url in panel.urls {
                 NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, _ in }
             }
+        }
+    }
+}
+
+/// Adds a "Keyboard Shortcuts…" item to the app menu (⌥⌘K) that opens the
+/// editor window — kept as its own `Commands` type so it can use `openWindow`.
+struct ShortcutEditorCommand: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(after: .appSettings) {
+            Button("Keyboard Shortcuts…") {
+                openWindow(id: MarkDown4WApp.shortcutsWindowID)
+            }
+            .keyboardShortcut("k", modifiers: [.command, .option])
         }
     }
 }
