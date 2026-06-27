@@ -1,16 +1,20 @@
 import AppKit
 
-/// Posted (by `ShortcutMonitor`) when the user triggers the Find shortcut.
-/// The key window's `ContentView` observes this to reveal its find bar.
+/// Posted by `ShortcutMonitor` when the user triggers a find-related shortcut.
+/// The key window's find bar / `ContentView` observes these.
 extension Notification.Name {
     static let mdShowFind = Notification.Name("net.songha.MarkDown4W.showFind")
+    static let mdFindNext = Notification.Name("net.songha.MarkDown4W.findNext")
+    static let mdFindPrevious = Notification.Name("net.songha.MarkDown4W.findPrevious")
 }
 
-/// User-customizable actions. Only these four are rebindable (per product spec).
+/// User-customizable actions, shown and rebindable in the Keyboard Shortcuts editor.
 enum ShortcutAction: String, CaseIterable, Identifiable {
     case increaseSize
     case decreaseSize
     case find
+    case findNext
+    case findPrevious
     case newTab
 
     var id: String { rawValue }
@@ -21,6 +25,8 @@ enum ShortcutAction: String, CaseIterable, Identifiable {
         case .increaseSize: return "Increase Text Size"
         case .decreaseSize: return "Decrease Text Size"
         case .find:         return "Find"
+        case .findNext:     return "Find Next"
+        case .findPrevious: return "Find Previous"
         case .newTab:       return "New Tab"
         }
     }
@@ -31,6 +37,8 @@ enum ShortcutAction: String, CaseIterable, Identifiable {
         case .increaseSize: return KeyShortcut(key: "=", modifiers: [.command])
         case .decreaseSize: return KeyShortcut(key: "-", modifiers: [.command])
         case .find:         return KeyShortcut(key: "f", modifiers: [.command])
+        case .findNext:     return KeyShortcut(key: "g", modifiers: [.command])
+        case .findPrevious: return KeyShortcut(key: "g", modifiers: [.command, .shift])
         case .newTab:       return KeyShortcut(key: "t", modifiers: [.command])
         }
     }

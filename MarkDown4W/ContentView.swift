@@ -46,10 +46,8 @@ struct ContentView: View {
                 if showFind {
                     FindBar(proxy: webProxy, isPresented: $showFind,
                             barColor: titlebarColor, isDark: resolvedTheme == "dark")
-                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: showFind)
             .background(WindowConfigurator(resolvedTheme: resolvedTheme))
             .toolbar {
                 MarkdownToolbar()

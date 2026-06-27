@@ -208,18 +208,19 @@ final class AppSettings: ObservableObject {
     }
 
     private static func loadShortcuts(from defaults: UserDefaults, key: String) -> [ShortcutAction: KeyShortcut] {
+        var result: [ShortcutAction: KeyShortcut] = [:]
         if let data = defaults.data(forKey: key),
            let decoded = try? JSONDecoder().decode([String: KeyShortcut].self, from: data) {
-            var result: [ShortcutAction: KeyShortcut] = [:]
             for (raw, sc) in decoded {
                 if let action = ShortcutAction(rawValue: raw) { result[action] = sc }
             }
-            return result
         }
-        // First run: seed factory defaults.
-        var seeded: [ShortcutAction: KeyShortcut] = [:]
-        for action in ShortcutAction.allCases { seeded[action] = action.defaultShortcut }
-        return seeded
+        // Seed factory defaults for any action with no stored binding yet (first
+        // run, or actions added in a newer version like Find Next/Previous).
+        for action in ShortcutAction.allCases where result[action] == nil {
+            result[action] = action.defaultShortcut
+        }
+        return result
     }
 }
 

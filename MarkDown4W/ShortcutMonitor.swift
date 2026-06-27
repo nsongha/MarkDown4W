@@ -30,6 +30,8 @@ final class ShortcutMonitor {
             case .decreaseSize: self.settings.decreaseFont()
             case .newTab:       self.onNewTab()
             case .find:         NotificationCenter.default.post(name: .mdShowFind, object: nil)
+            case .findNext:     NotificationCenter.default.post(name: .mdFindNext, object: nil)
+            case .findPrevious: NotificationCenter.default.post(name: .mdFindPrevious, object: nil)
             }
             return nil   // consume matched events
         }

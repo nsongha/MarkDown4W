@@ -51,7 +51,18 @@ struct FindBar: View {
         // system appearance (the window may be light while macOS is dark).
         .environment(\.colorScheme, isDark ? .dark : .light)
         .onExitCommand { close() }
-        .onAppear { fieldFocused = true }
+        .onAppear {
+            // Focus the field immediately so the user can type right after ⌘F.
+            fieldFocused = true
+            DispatchQueue.main.async { fieldFocused = true }
+        }
+        // Next/previous come from the customizable shortcuts (via the monitor).
+        .onReceive(NotificationCenter.default.publisher(for: .mdFindNext)) { _ in
+            step(forward: true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .mdFindPrevious)) { _ in
+            step(forward: false)
+        }
     }
 
     private var searchField: some View {
@@ -110,8 +121,6 @@ struct FindBar: View {
         }
         .buttonStyle(.plain)
         .disabled(result.total == 0)
-        // ⌘G = next, ⌘⇧G = previous (standard macOS find navigation).
-        .keyboardShortcut("g", modifiers: forward ? .command : [.command, .shift])
     }
 
     private func runFind() {
