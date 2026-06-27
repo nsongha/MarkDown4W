@@ -29,23 +29,25 @@ struct ContentView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            if showFind {
-                FindBar(proxy: webProxy, isPresented: $showFind)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+        MarkdownWebView(markdown: document.text,
+                        bodyFont: settings.bodyFont,
+                        fontSizePx: settings.fontSizePx,
+                        theme: resolvedTheme,
+                        proxy: webProxy)
+            .ignoresSafeArea()
+            // Find bar lives in the top safe-area inset, so toggling it pushes
+            // the content without the full-window relayout that caused flicker.
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if showFind {
+                    FindBar(proxy: webProxy, isPresented: $showFind)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
-            MarkdownWebView(markdown: document.text,
-                            bodyFont: settings.bodyFont,
-                            fontSizePx: settings.fontSizePx,
-                            theme: resolvedTheme,
-                            proxy: webProxy)
-        }
-        .ignoresSafeArea(edges: showFind ? [] : .all)
-        .animation(.easeInOut(duration: 0.2), value: showFind)
-        .background(WindowConfigurator(resolvedTheme: resolvedTheme))
-        .toolbar {
-            MarkdownToolbar(title: title)
-        }
+            .animation(.easeInOut(duration: 0.2), value: showFind)
+            .background(WindowConfigurator(resolvedTheme: resolvedTheme))
+            .toolbar {
+                MarkdownToolbar(title: title)
+            }
         .onReceive(NotificationCenter.default.publisher(for: .mdShowFind)) { _ in
             // Only the active (key) window/tab should reveal its find bar.
             guard controlActiveState == .key else { return }

@@ -46,9 +46,15 @@ struct WindowConfigurator: NSViewRepresentable {
         // Only react when the shade actually changed (avoids re-setting the
         // window appearance on unrelated SwiftUI updates, which caused flicker).
         guard theme != context.coordinator.appliedAppearance else { return }
-        DispatchQueue.main.async { [weak nsView] in
-            guard let window = nsView?.window else { return }
+        // Apply synchronously when the window is available so the titlebar
+        // switches in the same frame the content begins its fade (no lag→snap).
+        if let window = nsView.window {
             Self.applyAppearance(theme, to: window, coordinator: context.coordinator)
+        } else {
+            DispatchQueue.main.async { [weak nsView] in
+                guard let window = nsView?.window else { return }
+                Self.applyAppearance(theme, to: window, coordinator: context.coordinator)
+            }
         }
     }
 

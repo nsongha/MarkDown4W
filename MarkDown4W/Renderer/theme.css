@@ -38,10 +38,8 @@ html {
   --selection: rgba(9, 105, 218, 0.2);
   --scrollbar-thumb: rgba(0, 0, 0, 0.28);
   --scrollbar-thumb-hover: rgba(0, 0, 0, 0.45);
-  --find-bg: rgba(255, 214, 10, 0.40);
-  --find-border: rgba(170, 130, 0, 0.55);
-  --find-current-bg: rgba(255, 149, 0, 0.65);
-  --find-current-border: rgba(200, 90, 0, 0.95);
+  --find-bg: rgba(255, 225, 0, 0.20);
+  --find-border: rgba(180, 150, 0, 0.40);
 }
 
 :root[data-theme="sepia"] {
@@ -61,10 +59,8 @@ html {
   --selection: rgba(154, 91, 52, 0.20);
   --scrollbar-thumb: rgba(67, 52, 34, 0.30);
   --scrollbar-thumb-hover: rgba(67, 52, 34, 0.50);
-  --find-bg: rgba(205, 160, 70, 0.45);
-  --find-border: rgba(140, 100, 40, 0.55);
-  --find-current-bg: rgba(190, 110, 40, 0.60);
-  --find-current-border: rgba(120, 70, 25, 0.95);
+  --find-bg: rgba(150, 110, 45, 0.20);
+  --find-border: rgba(110, 80, 30, 0.45);
 }
 
 :root[data-theme="dark"] {
@@ -84,10 +80,8 @@ html {
   --selection: rgba(108, 182, 255, 0.28);
   --scrollbar-thumb: rgba(255, 255, 255, 0.28);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.5);
-  --find-bg: rgba(255, 214, 10, 0.32);
-  --find-border: rgba(255, 214, 10, 0.55);
-  --find-current-bg: rgba(255, 149, 0, 0.55);
-  --find-current-border: rgba(255, 170, 60, 0.95);
+  --find-bg: rgba(255, 214, 10, 0.16);
+  --find-border: rgba(255, 214, 10, 0.38);
 }
 
 /* ---- Base -------------------------------------------------------------- */
@@ -115,25 +109,29 @@ html,
 body,
 #content,
 #content * {
-  transition: background-color 0.28s ease, color 0.28s ease,
-              border-color 0.28s ease, box-shadow 0.28s ease;
+  transition: background-color 0.6s ease, color 0.6s ease,
+              border-color 0.6s ease, box-shadow 0.6s ease;
 }
 
 ::selection {
   background: var(--selection);
 }
 
-/* ---- Find matches: highlight + boxed, with an emphasized current match --- */
-mark.md-find {
+/* ---- Find matches: subtle box on all, BRIGHT yellow on the current match --
+   Scoped under #content so the snappy 0.12s find transition wins over the
+   600ms theme cross-fade above. */
+#content mark.md-find {
   background: var(--find-bg);
   color: inherit;
   border-radius: 3px;
-  box-shadow: 0 0 0 1.5px var(--find-border);
+  box-shadow: 0 0 0 1px var(--find-border);
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-mark.md-find-current {
-  background: var(--find-current-bg);
-  box-shadow: 0 0 0 2px var(--find-current-border);
+#content mark.md-find-current {
+  background: #ffd60a;            /* bright yellow, same in every shade */
+  color: #1a1a1a;                /* dark text stays readable on yellow */
+  box-shadow: 0 0 0 2px #d4a017;
 }
 
 /* ---- Reading column ---------------------------------------------------- */
