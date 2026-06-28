@@ -105,6 +105,25 @@ scripts/bump-version.sh patch --tag   # also git-commit + tag v0.1.1
 The script regenerates the Xcode project, so the new version takes effect on the
 next build.
 
+### Releasing a notarized DMG
+
+`scripts/release-dmg.sh` does the whole distribution build in one shot: build →
+sign with Developer ID → notarize with Apple → staple → package a `.dmg` (with a
+drag-to-Applications symlink) under `dist/`. The result opens with no Gatekeeper
+warnings.
+
+```sh
+scripts/release-dmg.sh
+# then publish, e.g.:
+gh release create v0.1.0 dist/MarkDown4W-0.1.0.dmg \
+  -R nsongha/MarkDown4W --title "MarkDown4W 0.1.0" --notes-file notes.md
+```
+
+It needs a *Developer ID Application* certificate in your keychain and a
+notarization keychain profile (see the script header for the one-time setup). The
+identity and profile name can be overridden via the `SIGN_IDENTITY` and
+`NOTARY_PROFILE` environment variables.
+
 The rendered web assets are committed under `MarkDown4W/Renderer/vendor/`, so a
 normal build needs **no** npm step. To refresh them to newer library versions:
 
