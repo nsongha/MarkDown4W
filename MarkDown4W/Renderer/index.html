@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MarkDown4W</title>
 
+  <!-- Enforce the offline guarantee: only bundled (same-origin) resources load.
+       Remote images/scripts/fetches in user markdown are blocked so opening a
+       document can never phone home (e.g. tracking pixels). 'unsafe-inline' is
+       required for the inline bootstrap script below and for the inline styles
+       KaTeX/mermaid generate; data: images are allowed for inline/SVG content. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' 'unsafe-inline';
+                 style-src 'self' 'unsafe-inline';
+                 img-src 'self' data:;
+                 font-src 'self';
+                 connect-src 'self';
+                 object-src 'none';
+                 base-uri 'none'">
+
   <!-- All resources are local (offline). No remote URLs. -->
   <link rel="stylesheet" href="./theme.css">
   <link rel="stylesheet" href="./vendor/katex.min.css">
@@ -241,6 +256,8 @@
       }
       var el = document.getElementById("content");
       el.innerHTML = md.render(markdown);
+      findState.marks = [];
+      findState.index = -1;
       runKatex();
       runMermaid();
     };
@@ -250,7 +267,8 @@
       var bodyKey = settings.bodyFont || "system";
       var codeKey = settings.codeFont || "sfmono";
       var size = settings.fontSizePx;
-      var theme = settings.theme === "dark" ? "dark" : "light";
+      var ALLOWED = { light: 1, sepia: 1, dark: 1 };
+      var theme = ALLOWED[settings.theme] ? settings.theme : "light";
 
       var root = document.documentElement;
 
@@ -264,11 +282,13 @@
       var themeChanged = theme !== currentTheme;
       root.setAttribute("data-theme", theme);
 
-      // Toggle highlight.js stylesheets.
+      // Toggle highlight.js stylesheets: light AND sepia use the light sheet;
+      // only dark uses the dark sheet.
+      var isDark = theme === "dark";
       var lightLink = document.getElementById("hljs-light");
       var darkLink = document.getElementById("hljs-dark");
-      if (lightLink) lightLink.disabled = (theme === "dark");
-      if (darkLink) darkLink.disabled = (theme !== "dark");
+      if (lightLink) lightLink.disabled = isDark;
+      if (darkLink) darkLink.disabled = !isDark;
 
       // Re-render mermaid only when the theme actually changed (per contract).
       currentTheme = theme;
@@ -276,6 +296,116 @@
         rerenderMermaidForTheme(theme);
       }
     };
+
+    /* ---------------------------------------------------------------- *
+     * Find: highlight + box ALL matches, track count + current index.
+     * Returns { count, current } (current is 1-based; 0 when none).
+     * ---------------------------------------------------------------- */
+    var findState = { marks: [], index: -1, query: "" };
+
+    function clearFindMarks() {
+      for (var i = 0; i < findState.marks.length; i++) {
+        var m = findState.marks[i];
+        var parent = m.parentNode;
+        if (parent) {
+          parent.replaceChild(document.createTextNode(m.textContent), m);
+          parent.normalize();
+        }
+      }
+      findState.marks = [];
+      findState.index = -1;
+    }
+
+    function setCurrentMatch(i) {
+      if (findState.index >= 0 && findState.marks[findState.index]) {
+        findState.marks[findState.index].classList.remove("md-find-current");
+      }
+      findState.index = i;
+      var m = findState.marks[i];
+      if (m) {
+        m.classList.add("md-find-current");
+        m.scrollIntoView({ block: "center", inline: "nearest" });
+      }
+    }
+
+    window.mdFind = function (b64) {
+      var query;
+      try { query = decodeB64(b64); } catch (e) { query = ""; }
+      clearFindMarks();
+      findState.query = query;
+      if (!query) return { count: 0, current: 0 };
+
+      var root = document.getElementById("content");
+      var lower = query.toLowerCase();
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function (node) {
+          if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
+          var p = node.parentNode;
+          if (p && (p.nodeName === "SCRIPT" || p.nodeName === "STYLE")) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      var textNodes = [];
+      var node;
+      while ((node = walker.nextNode())) textNodes.push(node);
+
+      for (var ti = 0; ti < textNodes.length; ti++) {
+        var tn = textNodes[ti];
+        var text = tn.nodeValue;
+        var hay = text.toLowerCase();
+        var idx = hay.indexOf(lower);
+        if (idx === -1) continue;
+        var frag = document.createDocumentFragment();
+        var pos = 0;
+        while (idx !== -1) {
+          if (idx > pos) frag.appendChild(document.createTextNode(text.slice(pos, idx)));
+          var mark = document.createElement("mark");
+          mark.className = "md-find";
+          mark.textContent = text.slice(idx, idx + query.length);
+          frag.appendChild(mark);
+          findState.marks.push(mark);
+          pos = idx + query.length;
+          idx = hay.indexOf(lower, pos);
+        }
+        if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+        tn.parentNode.replaceChild(frag, tn);
+      }
+
+      if (findState.marks.length) setCurrentMatch(0);
+      return { count: findState.marks.length, current: findState.marks.length ? 1 : 0 };
+    };
+
+    window.mdFindStep = function (forward) {
+      var count = findState.marks.length;
+      if (!count) return { count: 0, current: 0 };
+      var i = findState.index + (forward ? 1 : -1);
+      if (i < 0) i = count - 1;
+      if (i >= count) i = 0;
+      setCurrentMatch(i);
+      return { count: count, current: i + 1 };
+    };
+
+    window.mdFindClear = function () {
+      clearFindMarks();
+      findState.query = "";
+    };
+
+    /* ---- Auto-hiding scrollbar -------------------------------------- *
+     * Reveal the overlay scrollbar only while scrolling, then fade it out
+     * after a short idle delay — matching native macOS overlay behaviour
+     * regardless of the system "Show scroll bars" preference. */
+    var scrollIdleTimer = null;
+    function flashScrollbar() {
+      document.documentElement.classList.add("is-scrolling");
+      clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = setTimeout(function () {
+        document.documentElement.classList.remove("is-scrolling");
+      }, 1100);
+    }
+    window.addEventListener("scroll", flashScrollbar, { passive: true });
+    window.addEventListener("wheel", flashScrollbar, { passive: true });
 
     // Default appearance until Swift calls applySettings.
     window.applySettings({

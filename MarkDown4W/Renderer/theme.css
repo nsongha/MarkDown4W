@@ -22,21 +22,45 @@ html {
 }
 
 :root[data-theme="light"] {
-  --bg: #ffffff;
+  --bg: #faf9f7;
   --fg: #1a1a1a;
   --muted: #6b7280;
   --accent: #0969da;
   --accent-muted: rgba(9, 105, 218, 0.12);
-  --code-bg: #f6f8fa;
+  --code-bg: #f1f0ec;
   --code-fg: #1a1a1a;
   --inline-code-bg: rgba(175, 184, 193, 0.2);
-  --border: #d8dee4;
-  --blockquote-border: #d0d7de;
-  --table-header-bg: #f6f8fa;
-  --table-zebra: #fafbfc;
-  --hr: #d8dee4;
+  --border: #e2ded7;
+  --blockquote-border: #d6d1c8;
+  --table-header-bg: #f1f0ec;
+  --table-zebra: #f5f3ef;
+  --hr: #e2ded7;
   --selection: rgba(9, 105, 218, 0.2);
-  --scrollbar-thumb: rgba(0, 0, 0, 0.25);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.28);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.45);
+  --find-bg: rgba(255, 225, 0, 0.20);
+  --find-border: rgba(180, 150, 0, 0.40);
+}
+
+:root[data-theme="sepia"] {
+  --bg: #f4ecd8;
+  --fg: #433422;
+  --muted: #7d6f59;
+  --accent: #9a5b34;
+  --accent-muted: rgba(154, 91, 52, 0.14);
+  --code-bg: #ece2c8;
+  --code-fg: #433422;
+  --inline-code-bg: rgba(120, 100, 70, 0.18);
+  --border: #ddd0b0;
+  --blockquote-border: #d2c4a0;
+  --table-header-bg: #ece2c8;
+  --table-zebra: #efe6cf;
+  --hr: #ddd0b0;
+  --selection: rgba(154, 91, 52, 0.20);
+  --scrollbar-thumb: rgba(67, 52, 34, 0.30);
+  --scrollbar-thumb-hover: rgba(67, 52, 34, 0.50);
+  --find-bg: rgba(150, 110, 45, 0.20);
+  --find-border: rgba(110, 80, 30, 0.45);
 }
 
 :root[data-theme="dark"] {
@@ -54,7 +78,10 @@ html {
   --table-zebra: #242424;
   --hr: #3a3a3a;
   --selection: rgba(108, 182, 255, 0.28);
-  --scrollbar-thumb: rgba(255, 255, 255, 0.25);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.28);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.5);
+  --find-bg: rgba(255, 214, 10, 0.16);
+  --find-border: rgba(255, 214, 10, 0.38);
 }
 
 /* ---- Base -------------------------------------------------------------- */
@@ -73,19 +100,55 @@ body {
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Smooth, native-feeling theme cross-fade: animate every element's colors
+   (including highlight.js token colors via `#content *`) so switching shade
+   eases instead of flashing. Only animates when a color actually changes. */
+html,
+body,
+#content,
+#content * {
+  transition: background-color 0.6s ease, color 0.28s ease,
+              border-color 0.6s ease, box-shadow 0.6s ease;
 }
 
 ::selection {
   background: var(--selection);
 }
 
+/* ---- Find matches: subtle box on all, BRIGHT yellow on the current match --
+   Scoped under #content so the snappy 0.12s find transition wins over the
+   600ms theme cross-fade above. */
+#content mark.md-find {
+  background: var(--find-bg);
+  color: inherit;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--find-border);
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+#content mark.md-find-current {
+  background: #ffd60a;            /* bright yellow, same in every shade */
+  color: #1a1a1a;                /* dark text stays readable on yellow */
+  box-shadow: 0 0 0 2px #d4a017;
+}
+
 /* ---- Reading column ---------------------------------------------------- */
 
 #content {
-  max-width: 72ch;
+  /* content-box so max-width is the actual text measure (excludes padding).
+     ~76 characters per line — within the comfortable 50–80 range, with the
+     window providing clear side margins around it. */
+  box-sizing: content-box;
+  max-width: 76ch;
   margin: 0 auto;
-  padding: 48px;
+  /* Less top padding so the first heading sits closer to the title bar. */
+  padding: 28px 48px 48px;
+  /* Break long unbroken tokens (long URLs, hashes, base64 blobs) so they stay
+     inside the reading column instead of forcing horizontal page scroll. */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 #content > :first-child {
@@ -286,16 +349,30 @@ pre.mermaid {
   padding: 0.5em 0;
 }
 
-/* ---- Scrollbars (optional polish) ------------------------------------- */
+/* ---- Scrollbars: native-style overlay that auto-hides ------------------ */
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
 }
 
+/* Thumb is transparent (hidden) by default; the inset transparent border +
+   padding-box clip make it a thin overlay bar. It fades in while scrolling
+   (the `is-scrolling` class is toggled from JS) and on hover, then fades out. */
 ::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 6px;
+  background-color: transparent;
+  border-radius: 8px;
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.45s ease;
+}
+
+html.is-scrolling ::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
 }
 
 ::-webkit-scrollbar-track {

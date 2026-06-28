@@ -69,6 +69,13 @@ function pageHTML({ title, theme, bodyFont, fontSizePx, markdown }) {
     var f = document.getElementById("f");
     f.addEventListener("load", function () {
       try {
+        // Headless screenshots don't advance CSS transitions, so the theme
+        // color transition would otherwise be captured at t=0 (e.g. dark text
+        // frozen at the light color). Disable transitions/animations first.
+        var doc = f.contentDocument;
+        var st = doc.createElement("style");
+        st.textContent = "*,*::before,*::after{transition:none !important;animation:none !important}";
+        doc.head.appendChild(st);
         f.contentWindow.applySettings({bodyFont:"${bodyFont}",codeFont:"sfmono",fontSizePx:${fontSizePx},theme:"${theme}"});
         f.contentWindow.renderMarkdownB64(md);
       } catch (e) { document.title = "ERR:" + e; }

@@ -2,6 +2,50 @@ import SwiftUI
 import WebKit
 import AppKit
 
+/// A find result: 1-based `current` match and `total` count (both 0 = none).
+struct FindResult {
+    var current: Int
+    var total: Int
+    static let none = FindResult(current: 0, total: 0)
+}
+
+/// Bridge that lets `ContentView`'s find bar drive the in-page find engine
+/// (`window.mdFind` / `mdFindStep` / `mdFindClear`), which highlights and boxes
+/// all matches and reports a count. The web-view reference is assigned in
+/// `MarkdownWebView.makeNSView`.
+final class WebViewProxy: ObservableObject {
+    weak var webView: WKWebView?
+
+    /// Highlight all matches of `query`; reports the count and current index.
+    func find(_ query: String, completion: ((FindResult) -> Void)? = nil) {
+        guard let webView = webView, !query.isEmpty else { completion?(.none); return }
+        let b64 = Data(query.utf8).base64EncodedString()
+        webView.evaluateJavaScript("window.mdFind('\(b64)');") { value, _ in
+            completion?(Self.parse(value))
+        }
+    }
+
+    /// Move to the next/previous match; reports the new count and current index.
+    func findStep(forward: Bool, completion: ((FindResult) -> Void)? = nil) {
+        guard let webView = webView else { completion?(.none); return }
+        webView.evaluateJavaScript("window.mdFindStep(\(forward ? "true" : "false"));") { value, _ in
+            completion?(Self.parse(value))
+        }
+    }
+
+    /// Clear all find highlights (on closing the find bar).
+    func clearFind() {
+        webView?.evaluateJavaScript("window.mdFindClear();", completionHandler: nil)
+    }
+
+    private static func parse(_ value: Any?) -> FindResult {
+        guard let dict = value as? [String: Any] else { return .none }
+        let total = (dict["count"] as? Int) ?? (dict["count"] as? NSNumber)?.intValue ?? 0
+        let current = (dict["current"] as? Int) ?? (dict["current"] as? NSNumber)?.intValue ?? 0
+        return FindResult(current: current, total: total)
+    }
+}
+
 /// Hosts the bundled HTML renderer (`Renderer/index.html`) in a `WKWebView`
 /// and drives it via JavaScript.
 ///
@@ -18,8 +62,10 @@ struct MarkdownWebView: NSViewRepresentable {
     let bodyFont: String
     /// Body font size in px.
     let fontSizePx: Int
-    /// Concrete theme — already resolved to "light" or "dark" by the caller.
+    /// Concrete shade — resolved to "light", "sepia", or "dark" by the caller.
     let theme: String
+    /// Bridge for the find bar; receives the web-view reference on creation.
+    var proxy: WebViewProxy? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -28,6 +74,10 @@ struct MarkdownWebView: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.suppressesIncrementalRendering = false
+        // Serve the bundled renderer through a custom scheme so it loads
+        // correctly inside the App Sandbox (see BundleResourceSchemeHandler).
+        config.setURLSchemeHandler(context.coordinator.schemeHandler,
+                                   forURLScheme: BundleResourceSchemeHandler.scheme)
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -38,6 +88,8 @@ struct MarkdownWebView: NSViewRepresentable {
             scrollView.verticalScrollElasticity = .none
             scrollView.horizontalScrollElasticity = .none
         }
+
+        proxy?.webView = webView
 
         loadRenderer(into: webView)
         return webView
@@ -69,14 +121,11 @@ struct MarkdownWebView: NSViewRepresentable {
     // MARK: Loading
 
     private func loadRenderer(into webView: WKWebView) {
-        guard let url = Bundle.main.url(forResource: "index",
-                                        withExtension: "html",
-                                        subdirectory: "Renderer") else {
-            assertionFailure("Renderer/index.html missing from app bundle")
+        guard let url = URL(string: BundleResourceSchemeHandler.baseURL + "index.html") else {
+            assertionFailure("Invalid renderer base URL")
             return
         }
-        let directory = url.deletingLastPathComponent()
-        webView.loadFileURL(url, allowingReadAccessTo: directory)
+        webView.load(URLRequest(url: url))
     }
 
     // MARK: JavaScript bridge
@@ -118,6 +167,8 @@ struct MarkdownWebView: NSViewRepresentable {
     // MARK: Coordinator
 
     final class Coordinator: NSObject, WKNavigationDelegate {
+        /// Serves bundled renderer assets via the custom scheme.
+        let schemeHandler = BundleResourceSchemeHandler()
         /// True once the page has finished its initial load.
         var isLoaded = false
         /// Last markdown actually pushed to the page (change-detection).
@@ -153,8 +204,16 @@ struct MarkdownWebView: NSViewRepresentable {
                 decisionHandler(.cancel)
                 return
             }
-            // Allow the initial file load and in-page "#anchor" scrolls.
+            // Allow the initial load and in-page "#anchor" scrolls.
             decisionHandler(.allow)
+        }
+
+        /// Recover if the web content process is terminated (e.g. under memory
+        /// pressure): reload so the document reappears instead of going blank.
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            isLoaded = false
+            lastPushedMarkdown = nil
+            webView.reload()
         }
     }
 }
