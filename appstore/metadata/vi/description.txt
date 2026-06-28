@@ -1,0 +1,22 @@
+MarkDown4W là ứng dụng gốc cho macOS để đọc tệp Markdown (.md) — đẹp, mượt và nhanh. Mở giống như Preview hay TextEdit: mỗi tệp một cửa sổ, nhấp đúp trong Finder hoặc dùng File ▸ Open.
+
+Thiết kế chỉ để xem. Cố tình không có chức năng chỉnh sửa, nhờ vậy ứng dụng luôn gọn, nhanh và tập trung.
+
+HIỂN THỊ MARKDOWN ĐẦY ĐỦ
+• GitHub Flavored Markdown: tiêu đề, danh sách, in đậm/nghiêng, liên kết, ảnh, trích dẫn, bảng, gạch ngang, và danh sách công việc
+• Khối code tô màu cú pháp (highlight.js)
+• Công thức toán: nội dòng $…$ và khối $$…$$ (KaTeX)
+• Sơ đồ bằng Mermaid (khối ```mermaid)
+
+DỄ ĐỌC NGAY TỪ ĐẦU
+• Cột chữ thoải mái, giãn dòng rộng rãi
+• Phông chữ thân: System (SF Pro), New York, Georgia hoặc Helvetica Neue
+• Chỉnh cỡ chữ
+• Giao diện: Sáng, Tối hoặc Tự động (theo hệ thống)
+• Cài đặt được lưu và áp dụng tức thì
+
+RIÊNG TƯ & OFFLINE
+Mọi thứ hiển thị cục bộ. Nội dung Markdown không bao giờ rời khỏi máy bạn — không tài khoản, không theo dõi, không truy cập mạng với nội dung của bạn. Liên kết ngoài mở bằng trình duyệt mặc định.
+
+YÊU CẦU
+macOS 14 (Sonoma) trở lên.

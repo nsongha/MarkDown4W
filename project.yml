@@ -8,13 +8,14 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "3"
-    DEVELOPMENT_TEAM: ""
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "4"
+    # Apple Developer Team ID (from your signing certificate's OU field).
+    DEVELOPMENT_TEAM: "RCVQDZ42VU"
+    # Automatic signing: Xcode picks "Apple Development" for local builds and
+    # creates an "Apple Distribution" cert + Mac App Store provisioning profile
+    # automatically when you Archive for the App Store.
     CODE_SIGN_STYLE: Automatic
-    CODE_SIGN_IDENTITY: "-"
-    CODE_SIGNING_REQUIRED: "NO"
-    CODE_SIGNING_ALLOWED: "NO"
 targets:
   MarkDown4W:
     type: application

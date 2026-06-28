@@ -1,0 +1,90 @@
+# Fastfile for MarkDown4W — Mac App Store automation.
+#
+# Auth uses an App Store Connect API key (recommended; no 2FA prompts).
+# Create one at App Store Connect → Users and Access → Integrations → App Store
+# Connect API, download the AuthKey_XXXX.p8, then set these env vars (see
+# appstore/MANUAL_STEPS.md):
+#
+#   export ASC_KEY_ID="XXXXXXXXXX"
+#   export ASC_ISSUER_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+#   export ASC_KEY_PATH="$PWD/appstore/AuthKey.p8"   # keep this file OUT of git
+#
+# Then, from the repo root:
+#   fastlane mac metadata     # upload text + screenshots only (safe, no binary)
+#   fastlane mac release      # build, upload binary + metadata, submit for review
+
+default_platform(:mac)
+
+def asc_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_PATH"),
+    in_house: false
+  )
+end
+
+platform :mac do
+  desc "Regenerate the Xcode project from project.yml"
+  lane :gen do
+    sh("cd .. && xcodegen generate")
+  end
+
+  desc "Upload metadata + screenshots only (no binary, no submission)"
+  lane :metadata do
+    deliver(
+      api_key: asc_key,
+      skip_binary_upload: true,
+      skip_metadata: false,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      submit_for_review: false,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Build the Mac App Store package (.pkg) with automatic signing"
+  lane :build do
+    gen
+    build_mac_app(
+      project: "MarkDown4W.xcodeproj",
+      scheme: "MarkDown4W",
+      configuration: "Release",
+      export_method: "app-store",
+      # Lets Xcode create the Apple Distribution cert + App Store profile on the fly.
+      xcargs: "-allowProvisioningUpdates"
+    )
+  end
+
+  desc "Build + upload the binary only (no metadata change, no submission)"
+  lane :upload do
+    build
+    deliver(
+      api_key: asc_key,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Full release: build, upload binary + metadata + screenshots, submit for review"
+  lane :release do
+    build
+    deliver(
+      api_key: asc_key,
+      skip_binary_upload: false,
+      skip_metadata: false,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      submit_for_review: true,
+      automatic_release: true,
+      run_precheck_before_submit: false,
+      submission_information: {
+        # No IDFA / advertising; nothing to declare.
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false
+      }
+    )
+  end
+end

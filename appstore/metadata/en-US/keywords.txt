@@ -1,0 +1,1 @@
+markdown,md,viewer,reader,gfm,katex,mermaid,code,preview,notes,developer,text
