@@ -1,0 +1,9 @@
+app_identifier("net.songha.MarkDown4W")
+apple_id("nguyensongha2@gmail.com")
+
+# Apple Developer Portal team (from your signing certificate's OU field).
+team_id("RCVQDZ42VU")
+
+# If your App Store Connect account belongs to multiple teams, set the ASC team
+# id here too (find it in App Store Connect → Users and Access). Usually optional.
+# itc_team_id("")

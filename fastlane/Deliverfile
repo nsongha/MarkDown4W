@@ -1,0 +1,19 @@
+# Shared config for `fastlane deliver` (upload metadata + screenshots).
+# Behaviour (submit, build upload, API key) is set per-lane in the Fastfile.
+
+app_identifier("net.songha.MarkDown4W")
+username("nguyensongha2@gmail.com")
+
+# Text metadata (name, subtitle, description, keywords, …) and screenshots live
+# under appstore/ so they sit next to the rest of the App Store prep material.
+metadata_path("./appstore/metadata")
+screenshots_path("./appstore/screenshots")
+
+# This is a free app with no in-app purchases.
+price_tier(0)
+
+# Skip the interactive HTML preview confirmation (so it runs unattended).
+force(true)
+
+# We do not collect data; privacy nutrition labels are declared in App Store
+# Connect (see appstore/MANUAL_STEPS.md). deliver does not manage them.

@@ -1,0 +1,22 @@
+MarkDown4W is a native macOS app for reading Markdown (.md) files — beautiful, smooth, and fast. It opens like Preview or TextEdit: one window per file, double-click in Finder or use File ▸ Open.
+
+View-only by design. Editing is intentionally out of scope, so the app stays focused, fast, and distraction-free.
+
+COMPLETE MARKDOWN RENDERING
+• GitHub Flavored Markdown: headings, lists, bold/italic, links, images, blockquotes, tables, strikethrough, and task lists
+• Syntax-highlighted code blocks (highlight.js)
+• Math: inline $…$ and block $$…$$ (KaTeX)
+• Diagrams via Mermaid (```mermaid fenced blocks)
+
+READABLE BY DEFAULT
+• Comfortable reading column and generous line height
+• Body font: System (SF Pro), New York, Georgia, or Helvetica Neue
+• Adjustable text size
+• Theme: Light, Dark, or Auto (follows the system appearance)
+• Settings persist across launches and apply instantly
+
+PRIVATE & OFFLINE
+All rendering happens locally. Your Markdown never leaves your machine — no accounts, no tracking, no network access to your content. External links open in your default browser.
+
+REQUIREMENTS
+macOS 14 (Sonoma) or later.

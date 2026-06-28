@@ -14,3 +14,18 @@ renderer-src/package-lock.json
 
 # Internal working notes (not part of the published project)
 docs/
+
+# Fastlane / App Store Connect secrets and outputs — NEVER commit these
+appstore/AuthKey*.p8
+appstore/AuthKey*.json
+*.p8
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output/
+*.app.dSYM.zip
+*.pkg
+build_appstore/
+
+# Ruby / Bundler (fastlane)
+.bundle/
+vendor/bundle/

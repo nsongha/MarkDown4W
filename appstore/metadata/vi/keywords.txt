@@ -1,0 +1,1 @@
+markdown,md,xem,doc,gfm,katex,mermaid,code,xem truoc,ghi chu,lap trinh

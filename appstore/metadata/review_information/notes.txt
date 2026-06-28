@@ -1,0 +1,1 @@
+View-only Markdown viewer. Fully offline; no account, no login, no network access to user content. Open any .md file (e.g. the bundled sample) to see rendering.

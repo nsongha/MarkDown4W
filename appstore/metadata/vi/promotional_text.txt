@@ -1,0 +1,1 @@
+Trình đọc Markdown gốc cho macOS: bảng, code, công thức và sơ đồ — hiển thị tức thì, hoàn toàn offline. Không tài khoản, không theo dõi.
