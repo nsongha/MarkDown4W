@@ -185,3 +185,12 @@ Source layout:
 
 [MIT](LICENSE) © 2026 SongHa. Bundled JavaScript libraries keep their own
 (permissive) licenses — see [THIRD_PARTY.md](THIRD_PARTY.md).
+
+### Trademark
+
+The MIT license covers the **source code** only. The name **“MarkDown4W”**, the
+app icon, and the associated branding are trademarks of SongHa and are **not**
+licensed under MIT. You may freely use, modify, and redistribute the code
+(including for commercial purposes), but you may **not** use the MarkDown4W name
+or icon in a way that suggests your version is the official app or is endorsed by
+the author. Please ship derivative works under your own name and icon.
