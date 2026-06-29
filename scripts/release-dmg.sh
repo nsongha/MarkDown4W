@@ -15,12 +15,16 @@
 #         --apple-id <id> --team-id <team> --password <app-specific-password>
 #
 # Usage:
-#   scripts/release-dmg.sh
+#   scripts/release-dmg.sh [universal|intel|apple-silicon]
+#     (default: universal)
+#
+# Each variant produces dist/MarkDown4W-<version>-<variant>.dmg and does NOT wipe
+# other variants' DMGs, so you can build all three in a row.
 #
 # Override via env vars if your identity / profile differ:
 #   SIGN_IDENTITY="Developer ID Application: ... (TEAMID)" \
 #   NOTARY_PROFILE="MarkDown4W-shtool" \
-#   scripts/release-dmg.sh
+#   scripts/release-dmg.sh universal
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -33,13 +37,22 @@ PROJECT="MarkDown4W.xcodeproj"
 SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application: Nguyen Song Ha (RCVQDZ42VU)}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-MarkDown4W-shtool}"
 
+# Architecture variant → ARCHS + filename suffix.
+VARIANT="${1:-universal}"
+case "$VARIANT" in
+  universal)            ARCHS="arm64 x86_64"; SUFFIX="universal" ;;
+  intel|x86_64)         ARCHS="x86_64";       SUFFIX="intel" ;;
+  apple-silicon|arm64)  ARCHS="arm64";        SUFFIX="apple-silicon" ;;
+  *) echo "error: unknown variant '$VARIANT' (use universal|intel|apple-silicon)" >&2; exit 1 ;;
+esac
+
 read_value() { grep -E "^[[:space:]]*$1:" project.yml | head -1 | sed -E 's/.*"([^"]*)".*/\1/'; }
 MARKETING="$(read_value MARKETING_VERSION)"
 BUILD="$(read_value CURRENT_PROJECT_VERSION)"
 
-DMG="dist/${APP_NAME}-${MARKETING}.dmg"
+DMG="dist/${APP_NAME}-${MARKETING}-${SUFFIX}.dmg"
 
-echo "▸ Releasing ${APP_NAME} ${MARKETING} (${BUILD})"
+echo "▸ Releasing ${APP_NAME} ${MARKETING} (${BUILD}) — ${SUFFIX} [${ARCHS}]"
 echo "  identity: ${SIGN_IDENTITY}"
 echo "  notary:   ${NOTARY_PROFILE}"
 
@@ -51,12 +64,16 @@ if ! security find-identity -v -p codesigning | grep -qF "$SIGN_IDENTITY"; then
 fi
 
 # 1. Generate the project and build an unsigned Release (we sign manually next).
+#    Only the build/ dir is wiped — dist/ keeps DMGs from other variants.
 echo "▸ [1/6] Building (unsigned)…"
 command -v xcodegen >/dev/null && xcodegen generate >/dev/null
-rm -rf build dist
+rm -rf build
 xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
-  -derivedDataPath build CODE_SIGNING_ALLOWED=NO clean build >/dev/null
+  -derivedDataPath build CODE_SIGNING_ALLOWED=NO \
+  ARCHS="$ARCHS" ONLY_ACTIVE_ARCH=NO clean build >/dev/null
 APP="build/Build/Products/Release/${APP_NAME}.app"
+
+echo "  archs in binary: $(lipo -archs "$APP/Contents/MacOS/${APP_NAME}")"
 
 # 2. Sign with Developer ID + hardened runtime + secure timestamp.
 echo "▸ [2/6] Signing with Developer ID…"
@@ -89,7 +106,3 @@ xcrun stapler staple "$DMG"
 echo
 echo "✓ Done: $DMG"
 spctl -a -vvv -t exec "$APP" 2>&1 | sed 's/^/  /'
-echo
-echo "Next: create a GitHub release, e.g."
-echo "  gh release create v${MARKETING} \"$DMG\" -R nsongha/${APP_NAME} \\"
-echo "    --title \"${APP_NAME} ${MARKETING}\" --notes-file <notes.md>"
