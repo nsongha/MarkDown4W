@@ -1,0 +1,84 @@
+name: App Store Build & Upload
+
+# Builds MarkDown4W on a GA macOS runner (so the binary isn't tainted by a beta
+# OS/Xcode) and uploads it to App Store Connect. Pushing the `appstore-ci` branch
+# triggers a build; or run it manually from the Actions tab.
+on:
+  push:
+    branches: [appstore-ci]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Set up signing (keychain + certs + profile)
+        env:
+          DIST_CERT_P12_BASE64: ${{ secrets.DIST_CERT_P12_BASE64 }}
+          INSTALLER_CERT_P12_BASE64: ${{ secrets.INSTALLER_CERT_P12_BASE64 }}
+          PROVISION_PROFILE_BASE64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/app.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$DIST_CERT_P12_BASE64"      | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          echo "$INSTALLER_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/inst.p12"
+          security import "$RUNNER_TEMP/dist.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security import "$RUNNER_TEMP/inst.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$PROVISION_PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/md4w.provisionprofile"
+          echo "Signing identities:"; security find-identity -v "$KEYCHAIN" | grep -E "Apple Distribution|Installer" || true
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Archive (manual signing, unique build number)
+        run: |
+          set -euo pipefail
+          BUILD=$((100 + GITHUB_RUN_NUMBER))
+          echo "Using build number $BUILD"
+          xcodebuild \
+            -project MarkDown4W.xcodeproj \
+            -scheme MarkDown4W \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/MarkDown4W.xcarchive" \
+            CURRENT_PROJECT_VERSION=$BUILD \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="MarkDown4W Mac App Store" \
+            archive
+
+      - name: Export App Store package
+        run: |
+          set -euo pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/MarkDown4W.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist appstore/ExportOptions-appstore.plist
+          ls -la "$RUNNER_TEMP/export"
+
+      - name: Upload to App Store Connect
+        env:
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          PKG=$(ls "$RUNNER_TEMP/export/"*.pkg | head -1)
+          echo "Uploading $PKG"
+          xcrun altool --upload-app -t macos -f "$PKG" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
